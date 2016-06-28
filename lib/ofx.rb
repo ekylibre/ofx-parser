@@ -84,7 +84,7 @@ module OfxParser
 
   class BankAccount < Account
     TYPE = [:CHECKING, :SAVINGS, :MONEYMRKT, :CREDITLINE]
-    attr_accessor :type, :balance, :balance_date
+    attr_accessor :type, :balance, :balance_date, :branch_number
 
     include MonetarySupport
     extend MonetaryClassSupport

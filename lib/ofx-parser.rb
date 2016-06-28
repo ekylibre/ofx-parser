@@ -118,6 +118,7 @@ module OfxParser
       acct.transaction_uid = (doc/"TRNUID").inner_text.strip
       acct.number = (doc/"STMTRS/BANKACCTFROM/ACCTID").inner_text
       acct.routing_number = (doc/"STMTRS/BANKACCTFROM/BANKID").inner_text
+      acct.branch_number = (doc/"STMTRS/BANKACCTFROM/BRANCHID").inner_text
       acct.type = (doc/"STMTRS/BANKACCTFROM/ACCTTYPE").inner_text.strip
       acct.balance = (doc/"STMTRS/LEDGERBAL/BALAMT").inner_text
       acct.balance_date = parse_datetime((doc/"STMTRS/LEDGERBAL/DTASOF").inner_text)
