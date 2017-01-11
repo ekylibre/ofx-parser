@@ -37,7 +37,7 @@ module OfxParser
 
       header = Hash[*header.gsub(/^\r?\n+/,'').split(/\r\n/).collect do |e|
         e.split(/:/,2)
-      end.flatten]
+      end.flatten] rescue nil
 
       body.gsub!(/>\s+</m, '><')
       body.gsub!(/\s+</m, '<')
