@@ -1,11 +1,9 @@
 module OfxParser
-
   # MCC: Merchant Category Codes from
   # * http://www.purchasing.colostate.edu/pages/pdf/MCCS.pdf
   # * http://www.ctlr.msu.edu/cashiers/MC%20IC%20Apr%2007.pdf
   # * http://usa.visa.com/download/corporate/resources/mcc_booklet.pdf
   module Mcc
-
     CODES = {
       '0742' => 'VETERINARY SERVICES',
       '0763' => 'AGRICULTURAL COOPERATIVES',
@@ -667,8 +665,6 @@ module OfxParser
       '9751' => 'UK SUPERMARKETS ELECTRONIC HOT FILE',
       '9752' => 'UK PETROLS STATIONS ELECTRONIC HOT FILE',
       '9999' => 'MCC Invalid'
-    }
-
+    }.freeze
   end
 end
-

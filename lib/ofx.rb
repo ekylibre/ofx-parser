@@ -1,6 +1,5 @@
 module OfxParser
   module MonetaryClassSupport
-
     attr_accessor :monies
 
     def monetary_vars(*methods) #:nodoc:
@@ -15,16 +14,20 @@ module OfxParser
     #  '-123.45' => -12345
     #  '123' => 12300
     def pennies_for(amount)
-      return nil if amount == ""
+      return nil if amount == ''
       int, fraction = amount.scan(/\d+/)
-      int, fraction = 0, int if amount.match(/^-?\./)
-      i = (fraction.to_s.strip =~ /[1-9]/) ? "#{int}#{fraction[0,2]}".to_i : int.to_i * 100
+      if amount =~ /^-?\./
+        fraction = int
+        int = 0
+      end
+      i = fraction.to_s.strip =~ /[1-9]/ ? "#{int}#{fraction[0, 2]}".to_i : int.to_i * 100
       amount =~ /^\s*-\s*.?\d+/ ? -i : i
     end
 
-
     def original_method(meth) #:nodoc:
-      meth.to_s.sub('_in_pennies','').to_sym rescue nil
+      meth.to_s.sub('_in_pennies', '').to_sym
+    rescue
+      nil
     end
 
     def monetary_method_call?(meth) #:nodoc:
@@ -33,7 +36,7 @@ module OfxParser
     end
 
     def method_missing(meth, *args) #:nodoc:
-      if (monetary_method_call?(meth))
+      if monetary_method_call?(meth)
         pennies_for(send(original_method(meth)))
       else
         super
@@ -43,7 +46,6 @@ module OfxParser
     def respond_to?(meth) #:nodoc:
       monetary_method_call?(meth) ? true : super
     end
-
   end
 
   # This class is returned when a parse is successful.
@@ -56,16 +58,16 @@ module OfxParser
                   :investment_accounts
 
     def accounts
-      [ bank_accounts, credit_accounts, investment_accounts ].flatten!.compact!
+      [bank_accounts, credit_accounts, investment_accounts].flatten!.compact!
     end
 
     def bank_account #:nodoc:
-      warn "DEPRECATION WARNING: bank_account() is deprecated and may be removed from future releases, use bank_accounts() instead."
+      warn 'DEPRECATION WARNING: bank_account() is deprecated and may be removed from future releases, use bank_accounts() instead.'
       bank_accounts.first
     end
 
     def credit_card #:nodoc:
-      warn "DEPRECATION WARNING: credit_card() is deprecated and may be removed from future releases, use credit_accounts() instead."
+      warn 'DEPRECATION WARNING: credit_card() is deprecated and may be removed from future releases, use credit_accounts() instead.'
       credit_accounts.first
     end
   end
@@ -83,7 +85,7 @@ module OfxParser
   end
 
   class BankAccount < Account
-    TYPE = [:CHECKING, :SAVINGS, :MONEYMRKT, :CREDITLINE]
+    TYPE = %i[CHECKING SAVINGS MONEYMRKT CREDITLINE].freeze
     attr_accessor :type, :balance, :balance_date, :branch_number
 
     include MonetarySupport
@@ -124,24 +126,24 @@ module OfxParser
     monetary_vars :amount
 
     TYPE = {
-      :CREDIT      => "Generic credit",
-      :DEBIT       => "Generic debit",
-      :INT         => "Interest earned or paid ",
-      :DIV         => "Dividend",
-      :FEE         => "FI fee",
-      :SRVCHG      => "Service charge",
-      :DEP         => "Deposit",
-      :ATM         => "ATM debit or credit",
-      :POS         => "Point of sale debit or credit ",
-      :XFER        => "Transfer",
-      :CHECK       => "Check",
-      :PAYMENT     => "Electronic payment",
-      :CASH        => "Cash withdrawal",
-      :DIRECTDEP   => "Direct deposit",
-      :DIRECTDEBIT => "Merchant initiated debit",
-      :REPEATPMT   => "Repeating payment/standing order",
-      :OTHER       => "Other"
-    }
+      CREDIT: 'Generic credit',
+      DEBIT: 'Generic debit',
+      INT: 'Interest earned or paid ',
+      DIV: 'Dividend',
+      FEE: 'FI fee',
+      SRVCHG: 'Service charge',
+      DEP: 'Deposit',
+      ATM: 'ATM debit or credit',
+      POS: 'Point of sale debit or credit ',
+      XFER: 'Transfer',
+      CHECK: 'Check',
+      PAYMENT: 'Electronic payment',
+      CASH: 'Cash withdrawal',
+      DIRECTDEP: 'Direct deposit',
+      DIRECTDEBIT: 'Merchant initiated debit',
+      REPEATPMT: 'Repeating payment/standing order',
+      OTHER: 'Other'
+    }.freeze
 
     def type_desc
       TYPE[type]
@@ -154,7 +156,7 @@ module OfxParser
 
     undef sic
     def sic
-      @sic == "" ? nil : @sic
+      @sic == '' ? nil : @sic
     end
 
     def sic_desc
@@ -162,11 +164,11 @@ module OfxParser
     end
 
     def eql?(other)
-      self.fit_id == other.fit_id
+      fit_id == other.fit_id
     end
 
     def hash
-      self.fit_id.hash
+      fit_id.hash
     end
   end
 
@@ -184,7 +186,7 @@ module OfxParser
       '15500'	=> 'Signon invalid',
       '15501'	=> 'Customer account already in use',
       '15502'	=> 'USERPASS Lockout'
-    }
+    }.freeze
 
     def code_desc
       CODES[code]
@@ -194,11 +196,9 @@ module OfxParser
     def code
       @code.to_s.strip
     end
-
   end
 
   class Institute
     attr_accessor :name, :id
   end
-
 end

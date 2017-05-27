@@ -3,21 +3,18 @@ require 'hpricot'
 require 'time'
 require 'date'
 
-%w(ofx mcc).each do |fn|
+%w[ofx mcc].each do |fn|
   require File.dirname(__FILE__) + "/#{fn}"
 end
 
 module OfxParser
-  VERSION = '1.1.0'
-
   class OfxParser
-
     # Creates and returns an Ofx instance when given a well-formed OFX document,
     # complete with the mandatory key:pair header.
     def self.parse(ofx)
       ofx = ofx.respond_to?(:read) ? ofx.read.to_s : ofx.to_s
 
-      return Ofx.new if ofx == ""
+      return Ofx.new if ofx == ''
 
       header, body = pre_process(ofx)
 
@@ -35,9 +32,13 @@ module OfxParser
     def self.pre_process(ofx)
       header, body = ofx.split(/\n{2,}|:?<OFX>/, 2)
 
-      header = Hash[*header.gsub(/^\r?\n+/,'').split(/\r\n/).collect do |e|
-        e.split(/:/,2)
-      end.flatten] rescue nil
+      header = begin
+                 Hash[*header.gsub(/^\r?\n+/, '').split(/\r\n/).collect do |e|
+                        e.split(/:/, 2)
+                      end.flatten]
+               rescue
+                 nil
+               end
 
       body.gsub!(/>\s+</m, '><')
       body.gsub!(/\s+</m, '<')
@@ -55,57 +56,60 @@ module OfxParser
     #
     # Returns a DateTime object. Milliseconds (XXX) are ignored.
     def self.parse_datetime(date)
-      DateTime.parse(date) rescue nil
+      DateTime.parse(date)
+    rescue
+      nil
     end
 
-  private
+    private
+
     def self.parse_body(body)
       doc = Hpricot.XML(body)
 
       ofx = Ofx.new
 
-      ofx.sign_on = build_signon((doc/"SIGNONMSGSRSV1/SONRS"))
-      ofx.signup_account_info = build_info((doc/"SIGNUPMSGSRSV1/ACCTINFOTRNRS"))
+      ofx.sign_on = build_signon((doc / 'SIGNONMSGSRSV1/SONRS'))
+      ofx.signup_account_info = build_info((doc / 'SIGNUPMSGSRSV1/ACCTINFOTRNRS'))
 
       # Bank Accounts
-      bank_fragment = (doc/"BANKMSGSRSV1/STMTTRNRS")
+      bank_fragment = (doc / 'BANKMSGSRSV1/STMTTRNRS')
       ofx.bank_accounts = bank_fragment.collect do |fragment|
         build_bank(fragment)
       end
 
       # Credit Cards
-      credit_card_fragment = (doc/"CREDITCARDMSGSRSV1/CCSTMTTRNRS")
+      credit_card_fragment = (doc / 'CREDITCARDMSGSRSV1/CCSTMTTRNRS')
       ofx.credit_accounts = credit_card_fragment.collect do |fragment|
         build_credit(fragment)
       end
 
       # Investments (?)
-      #build_investment((doc/"SIGNONMSGSRQV1"))
+      # build_investment((doc/"SIGNONMSGSRQV1"))
 
       ofx
     end
 
     def self.build_signon(doc)
       sign_on = SignOn.new
-      sign_on.status = build_status((doc/"STATUS"))
-      sign_on.date = parse_datetime((doc/"DTSERVER").inner_text)
-      sign_on.language = (doc/"LANGUAGE").inner_text
+      sign_on.status = build_status((doc / 'STATUS'))
+      sign_on.date = parse_datetime((doc / 'DTSERVER').inner_text)
+      sign_on.language = (doc / 'LANGUAGE').inner_text
 
       sign_on.institute = Institute.new
-      sign_on.institute.name = ((doc/"FI")/"ORG").inner_text
-      sign_on.institute.id = ((doc/"FI")/"FID").inner_text
+      sign_on.institute.name = ((doc / 'FI') / 'ORG').inner_text
+      sign_on.institute.id = ((doc / 'FI') / 'FID').inner_text
       sign_on
     end
 
     def self.build_info(doc)
       account_infos = []
 
-      (doc/"ACCTINFO").each do |info_doc|
+      (doc / 'ACCTINFO').each do |info_doc|
         acc_info = AccountInfo.new
-        acc_info.desc = (info_doc/"DESC").inner_text
-        acc_info.number = (info_doc/"ACCTID").first.inner_text
-        acc_info.bank_id = (info_doc/"BANKID").first.inner_text unless (info_doc/"BANKID").empty?
-        acc_info.type = (info_doc/"ACCTTYPE").first.inner_text unless (info_doc/"ACCTTYPE").empty?
+        acc_info.desc = (info_doc / 'DESC').inner_text
+        acc_info.number = (info_doc / 'ACCTID').first.inner_text
+        acc_info.bank_id = (info_doc / 'BANKID').first.inner_text unless (info_doc / 'BANKID').empty?
+        acc_info.type = (info_doc / 'ACCTTYPE').first.inner_text unless (info_doc / 'ACCTTYPE').empty?
         account_infos << acc_info
       end
 
@@ -115,21 +119,21 @@ module OfxParser
     def self.build_bank(doc)
       acct = BankAccount.new
 
-      acct.transaction_uid = (doc/"TRNUID").inner_text.strip
-      acct.number = (doc/"STMTRS/BANKACCTFROM/ACCTID").inner_text
-      acct.routing_number = (doc/"STMTRS/BANKACCTFROM/BANKID").inner_text
-      acct.branch_number = (doc/"STMTRS/BANKACCTFROM/BRANCHID").inner_text
-      acct.type = (doc/"STMTRS/BANKACCTFROM/ACCTTYPE").inner_text.strip
-      acct.balance = (doc/"STMTRS/LEDGERBAL/BALAMT").inner_text
-      acct.balance_date = parse_datetime((doc/"STMTRS/LEDGERBAL/DTASOF").inner_text)
+      acct.transaction_uid = (doc / 'TRNUID').inner_text.strip
+      acct.number = (doc / 'STMTRS/BANKACCTFROM/ACCTID').inner_text
+      acct.routing_number = (doc / 'STMTRS/BANKACCTFROM/BANKID').inner_text
+      acct.branch_number = (doc / 'STMTRS/BANKACCTFROM/BRANCHID').inner_text
+      acct.type = (doc / 'STMTRS/BANKACCTFROM/ACCTTYPE').inner_text.strip
+      acct.balance = (doc / 'STMTRS/LEDGERBAL/BALAMT').inner_text
+      acct.balance_date = parse_datetime((doc / 'STMTRS/LEDGERBAL/DTASOF').inner_text)
 
       statement = Statement.new
-      statement.currency = (doc/"STMTRS/CURDEF").inner_text
-      statement.start_date = parse_datetime((doc/"STMTRS/BANKTRANLIST/DTSTART").inner_text)
-      statement.end_date = parse_datetime((doc/"STMTRS/BANKTRANLIST/DTEND").inner_text)
+      statement.currency = (doc / 'STMTRS/CURDEF').inner_text
+      statement.start_date = parse_datetime((doc / 'STMTRS/BANKTRANLIST/DTSTART').inner_text)
+      statement.end_date = parse_datetime((doc / 'STMTRS/BANKTRANLIST/DTEND').inner_text)
       acct.statement = statement
 
-      statement.transactions = (doc/"STMTRS/BANKTRANLIST/STMTTRN").collect do |t|
+      statement.transactions = (doc / 'STMTRS/BANKTRANLIST/STMTTRN').collect do |t|
         build_transaction(t)
       end
 
@@ -139,20 +143,20 @@ module OfxParser
     def self.build_credit(doc)
       acct = CreditAccount.new
 
-      acct.number = (doc/"CCSTMTRS/CCACCTFROM/ACCTID").inner_text
-      acct.transaction_uid = (doc/"TRNUID").inner_text.strip
-      acct.balance = (doc/"CCSTMTRS/LEDGERBAL/BALAMT").inner_text
-      acct.balance_date = parse_datetime((doc/"CCSTMTRS/LEDGERBAL/DTASOF").inner_text)
-      acct.remaining_credit = (doc/"CCSTMTRS/AVAILBAL/BALAMT").inner_text
-      acct.remaining_credit_date = parse_datetime((doc/"CCSTMTRS/AVAILBAL/DTASOF").inner_text)
+      acct.number = (doc / 'CCSTMTRS/CCACCTFROM/ACCTID').inner_text
+      acct.transaction_uid = (doc / 'TRNUID').inner_text.strip
+      acct.balance = (doc / 'CCSTMTRS/LEDGERBAL/BALAMT').inner_text
+      acct.balance_date = parse_datetime((doc / 'CCSTMTRS/LEDGERBAL/DTASOF').inner_text)
+      acct.remaining_credit = (doc / 'CCSTMTRS/AVAILBAL/BALAMT').inner_text
+      acct.remaining_credit_date = parse_datetime((doc / 'CCSTMTRS/AVAILBAL/DTASOF').inner_text)
 
       statement = Statement.new
-      statement.currency = (doc/"CCSTMTRS/CURDEF").inner_text
-      statement.start_date = parse_datetime((doc/"CCSTMTRS/BANKTRANLIST/DTSTART").inner_text)
-      statement.end_date = parse_datetime((doc/"CCSTMTRS/BANKTRANLIST/DTEND").inner_text)
+      statement.currency = (doc / 'CCSTMTRS/CURDEF').inner_text
+      statement.start_date = parse_datetime((doc / 'CCSTMTRS/BANKTRANLIST/DTSTART').inner_text)
+      statement.end_date = parse_datetime((doc / 'CCSTMTRS/BANKTRANLIST/DTEND').inner_text)
       acct.statement = statement
 
-      statement.transactions = (doc/"CCSTMTRS/BANKTRANLIST/STMTTRN").collect do |t|
+      statement.transactions = (doc / 'CCSTMTRS/BANKTRANLIST/STMTTRN').collect do |t|
         build_transaction(t)
       end
 
@@ -162,30 +166,26 @@ module OfxParser
     # for credit and bank transactions.
     def self.build_transaction(t)
       transaction = Transaction.new
-      transaction.type = (t/"TRNTYPE").inner_text
-      transaction.date = parse_datetime((t/"DTPOSTED").inner_text)
-      transaction.date_initiated = parse_datetime((t/"DTUSER").inner_text) unless (t/"DTUSER").inner_text.empty?
-      transaction.amount = (t/"TRNAMT").inner_text
-      transaction.fit_id = (t/"FITID").inner_text
-      transaction.payee = (t/"PAYEE").inner_text + (t/"NAME").inner_text
-      transaction.memo = (t/"MEMO").inner_text
-      transaction.sic = (t/"SIC").inner_text
-      transaction.check_number = (t/"CHECKNUM").inner_text unless (t/"CHECKNUM").inner_text.empty?
+      transaction.type = (t / 'TRNTYPE').inner_text
+      transaction.date = parse_datetime((t / 'DTPOSTED').inner_text)
+      transaction.date_initiated = parse_datetime((t / 'DTUSER').inner_text) unless (t / 'DTUSER').inner_text.empty?
+      transaction.amount = (t / 'TRNAMT').inner_text
+      transaction.fit_id = (t / 'FITID').inner_text
+      transaction.payee = (t / 'PAYEE').inner_text + (t / 'NAME').inner_text
+      transaction.memo = (t / 'MEMO').inner_text
+      transaction.sic = (t / 'SIC').inner_text
+      transaction.check_number = (t / 'CHECKNUM').inner_text unless (t / 'CHECKNUM').inner_text.empty?
       transaction
     end
 
-
-    def self.build_investment(doc)
-
-    end
+    def self.build_investment(_doc); end
 
     def self.build_status(doc)
       status = Status.new
-      status.code = (doc/"CODE").inner_text
-      status.severity = (doc/"SEVERITY").inner_text
-      status.message = (doc/"MESSAGE").inner_text
+      status.code = (doc / 'CODE').inner_text
+      status.severity = (doc / 'SEVERITY').inner_text
+      status.message = (doc / 'MESSAGE').inner_text
       status
     end
-
   end
 end
