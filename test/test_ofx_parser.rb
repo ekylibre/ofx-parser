@@ -465,7 +465,11 @@ class OfxParserTest < MiniTest::Unit::TestCase
 
     amounts.each do |actual, expected|
       x.amount = actual
-      assert_equal expected, x.amount_in_pennies, "#{actual.inspect} should give #{expected.inspect}"
+      if expected.nil?
+        assert_nil x.amount_in_pennies, "#{actual.inspect} should be nil"
+      else
+        assert_equal expected, x.amount_in_pennies, "#{actual.inspect} should give #{expected.inspect}"
+      end
     end
   end
 end
