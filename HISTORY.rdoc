@@ -1,5 +1,8 @@
 == Unreleased
 
+== 1.2.0
+
+* Works with Bundler gem tools
 * Now supports parsing files that contain multiple bank and/or credit card accounts. (Justin Mecham)
 
 == 1.1.0

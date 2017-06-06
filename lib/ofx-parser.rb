@@ -3,9 +3,8 @@ require 'hpricot'
 require 'time'
 require 'date'
 
-%w[ofx mcc].each do |fn|
-  require File.dirname(__FILE__) + "/#{fn}"
-end
+require 'ofx-parser/ofx'
+require 'ofx-parser/mcc'
 
 module OfxParser
   class OfxParser
